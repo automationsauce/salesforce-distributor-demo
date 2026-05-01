@@ -10,7 +10,17 @@ app.get("/", (req, res) => {
 app.get("/health", (req, res) => {
   res.json({ status: "ok" });
 });
+//Sync Distribution Data
+app.post("/sync", (req, res) => {
+  console.log("SYNC HIT");
+  console.log(JSON.stringify(req.body, null, 2));
 
+  res.json({
+    success: true,
+    message: "Metadata synced"
+  });
+});
+//Assign Records Logic
 app.post("/assign-bulk", (req, res) => {
   const records = req.body.records || [];
 
