@@ -80,7 +80,7 @@ app.post("/sync", (req, res) => {
 app.get("/config", (req, res) => {
   res.json(distributorConfig);
 });
-
+// Pass For Distribution
 // Check Logic
 app.post("/test-logic", (req, res) => {
   const record = req.body.record;
