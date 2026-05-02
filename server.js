@@ -76,6 +76,11 @@ app.post("/sync", (req, res) => {
     agentCount: distributorConfig.agents?.length || 0
   });
 });
+// Config
+app.get("/config", (req, res) => {
+  res.json(distributorConfig);
+});
+
 // Check Logic
 app.post("/test-logic", (req, res) => {
   const record = req.body.record;
