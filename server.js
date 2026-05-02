@@ -17,6 +17,11 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok" });
 });
 
+app.use((req, res, next) => {
+  console.log("REQUEST HIT:", req.method, req.url);
+  next();
+});
+
 function evaluateCriterion(record, criterion) {
   const recordValue = record[criterion.field];
   const targetValue = criterion.value;
