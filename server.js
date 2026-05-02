@@ -68,7 +68,12 @@ function getNextAgent(distributorId) {
 
 // Sync Distribution Data
 app.post("/sync", (req, res) => {
-  distributorConfig = req.body;
+  distributorConfig = {
+    settings: req.body.settings || {},
+    distributors: req.body.distributors || (req.body.distributor ? [req.body.distributor] : []),
+    criteria: req.body.criteria || [],
+    agents: req.body.agents || []
+  };
 
   console.log("SYNC HIT");
   console.log(JSON.stringify(distributorConfig, null, 2));
@@ -76,9 +81,9 @@ app.post("/sync", (req, res) => {
   res.json({
     success: true,
     message: "Metadata synced",
-    distributorCount: distributorConfig.distributors?.length || 0,
-    criteriaCount: distributorConfig.criteria?.length || 0,
-    agentCount: distributorConfig.agents?.length || 0
+    distributorCount: distributorConfig.distributors.length,
+    criteriaCount: distributorConfig.criteria.length,
+    agentCount: distributorConfig.agents.length
   });
 });
 // Config
