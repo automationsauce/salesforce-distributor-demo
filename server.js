@@ -91,6 +91,9 @@ app.get("/config", (req, res) => {
   res.json(distributorConfig);
 });
 // Pass For Distribution
+app.get("/test-logic", (req, res) => {
+  res.send("test-logic exists, but use POST with JSON body");
+});
 // Check Logic
 app.post("/test-logic", (req, res) => {
   const record = req.body.record;
