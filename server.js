@@ -76,6 +76,42 @@ app.post("/sync", (req, res) => {
     agentCount: distributorConfig.agents?.length || 0
   });
 });
+// Check Logic
+app.post("/test-logic", (req, res) => {
+  const record = req.body.record;
+  const testResults = [];
+
+  for (const distributor of distributorConfig.distributors || []) {
+    const relatedCriteria = (distributorConfig.criteria || [])
+      .filter(c => c.distributionId === distributor.id);
+
+    const criteriaResults = {};
+
+    for (const criterion of relatedCriteria) {
+      criteriaResults[criterion.sequence] = evaluateCriterion(record, criterion);
+    }
+
+    let matched = false;
+    let error = null;
+
+    try {
+      matched = evaluateLogic(distributor.logic, criteriaResults);
+    } catch (e) {
+      error = e.message;
+    }
+
+    testResults.push({
+      distributorId: distributor.id,
+      distributorName: distributor.name,
+      logic: distributor.logic,
+      criteriaResults,
+      matched,
+      error
+    });
+  }
+
+  res.json({ results: testResults });
+});
 
 // Assign Records Logic
 app.post("/assign-bulk", (req, res) => {
