@@ -1,5 +1,6 @@
 const express = require("express");
 const app = express();
+let accounts = {};
 
 app.use(express.json());
 
@@ -68,22 +69,26 @@ function getNextAgent(distributorId) {
 
 // Sync Distribution Data
 app.post("/sync", (req, res) => {
-  distributorConfig = {
+  const accountId = req.body.settings?.accountId;
+
+  if (!accountId) {
+    return res.status(400).json({ error: "Missing accountId" });
+  }
+
+  accounts[accountId] = {
     settings: req.body.settings || {},
-    distributors: req.body.distributors || (req.body.distributor ? [req.body.distributor] : []),
+    salesforceConnection: req.body.salesforceConnection || {},
+    distributors: req.body.distributors || [],
     criteria: req.body.criteria || [],
     agents: req.body.agents || []
   };
 
-  console.log("SYNC HIT");
-  console.log(JSON.stringify(distributorConfig, null, 2));
+  distributorConfig = accounts[accountId];
 
   res.json({
     success: true,
-    message: "Metadata synced",
-    distributorCount: distributorConfig.distributors.length,
-    criteriaCount: distributorConfig.criteria.length,
-    agentCount: distributorConfig.agents.length
+    message: "Metadata and Salesforce connection synced",
+    accountId
   });
 });
 // Config
