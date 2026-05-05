@@ -249,7 +249,7 @@ app.post("/poll/:accountId", async (req, res) => {
 
   if (!account) {
     return res.status(404).json({ error: "Account not found" });
-  }a
+  }
 
   try {
     const result = await pollAccount(account);
