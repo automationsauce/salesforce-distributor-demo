@@ -465,3 +465,18 @@ const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log(`Distributor demo running on port ${port}`);
 });
+
+setInterval(async () => {
+  for (const accountId in accounts) {
+    const account = accounts[accountId];
+
+    if (!account.settings?.enablePolling) continue;
+
+    try {
+      console.log("Auto polling:", accountId);
+      await pollAccount(account);
+    } catch (e) {
+      console.error("Polling error:", e.message);
+    }
+  }
+}, 30000); // every 30 seconds
