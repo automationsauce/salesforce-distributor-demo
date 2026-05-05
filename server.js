@@ -204,19 +204,21 @@ app.post("/test-logic", (req, res) => {
 });
 
 // Assign Records Logic
-app.post("/assign-bulk", (req, res) => {
+app.post("/assign-bulk", async (req, res) => {
+  const account = distributorConfig;
+
   const records = req.body.records || [];
   const assignments = [];
 
   for (const record of records) {
     let matched = false;
 
-    const sortedDistributors = [...(distributorConfig.distributors || [])]
+    const sortedDistributors = [...(account.distributors || [])]
       .filter(distributor => distributor.active === true)
       .sort((a, b) => Number(a.priority || 999) - Number(b.priority || 999));
 
     for (const distributor of sortedDistributors) {
-      const relatedCriteria = (distributorConfig.criteria || [])
+      const relatedCriteria = (account.criteria || [])
         .filter(c => c.distributionId === distributor.id);
 
       const results = {};
@@ -230,7 +232,7 @@ app.post("/assign-bulk", (req, res) => {
       if (logicMatched) {
         const { agent, nextAgentSequence } =
           getNextAgentForDistributor(account, distributor);
-        
+
         if (agent) {
           assignments.push({
             recordId: record.Id,
@@ -238,7 +240,7 @@ app.post("/assign-bulk", (req, res) => {
             matchedDistributorId: distributor.id,
             reason: `Matched ${distributor.name}`
           });
-        
+
           await updateDistributorNextAgent(
             account,
             distributor.id,
