@@ -223,7 +223,7 @@ app.post("/poll/:accountId", async (req, res) => {
 
   if (!account) {
     return res.status(404).json({ error: "Account not found" });
-  }
+  }a
 
   try {
     const result = await pollAccount(account);
@@ -237,8 +237,14 @@ async function pollAccount(account) {
   const results = [];
 
   for (const config of account.objectConfigs || []) {
-
-    if (!config.entryQueueId) continue;
+    if (!config.entryQueueId) {
+      results.push({
+        object: config.objectApiName,
+        skipped: true,
+        reason: "Missing entryQueueId"
+      });
+      continue;
+    }
 
     const fields = config.requiredFields || ["Id", "OwnerId"];
 
@@ -249,43 +255,30 @@ async function pollAccount(account) {
       LIMIT 50
     `;
 
-    console.log("Polling:", config.objectApiName);
+    console.log("SOQL:", soql);
 
     const records = await querySalesforce(account, soql);
 
+    console.log("Salesforce response:", JSON.stringify(records, null, 2));
+
     if (!records.records || records.records.length === 0) {
+      results.push({
+        object: config.objectApiName,
+        recordsFound: 0,
+        soql
+      });
       continue;
     }
 
-    console.log(`Found ${records.records.length} records`);
-
-    // Use your existing assign logic
-    const assignments = records.records.map(record => {
-      let ownerId = record.OwnerId;
-
-      if (record.LeadSource === "SEO/Direct" && Number(record.Number_Units__c) > 3) {
-        ownerId = "005USERAIDHERE";
-      }
-
-      return {
-        recordId: record.Id,
-        ownerId
-      };
-    });
-
-    // Update Salesforce
-    for (const assignment of assignments) {
-      await updateOwner(
-        account,
-        config.objectApiName,
-        assignment.recordId,
-        assignment.ownerId
-      );
-    }
+    const assignments = records.records.map(record => ({
+      recordId: record.Id,
+      ownerId: record.OwnerId
+    }));
 
     results.push({
       object: config.objectApiName,
-      processed: assignments.length
+      recordsFound: records.records.length,
+      assignments
     });
   }
 
