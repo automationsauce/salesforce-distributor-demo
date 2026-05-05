@@ -90,7 +90,8 @@ app.post("/sync", (req, res) => {
     salesforceConnection: req.body.salesforceConnection || {},
     distributors: req.body.distributors || [],
     criteria: req.body.criteria || [],
-    agents: req.body.agents || []
+    agents: req.body.agents || [],
+    objectConfigs: req.body.objectConfigs || []
   };
 
   distributorConfig = accounts[accountId];
