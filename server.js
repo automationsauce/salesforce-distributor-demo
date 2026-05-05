@@ -190,6 +190,97 @@ app.post("/assign-bulk", (req, res) => {
   res.json({ assignments });
 });
 
+async function querySalesforce(account, soql) {
+  const token = await refreshSalesforceToken(account);
+
+  const url =
+    token.instance_url +
+    "/services/data/v60.0/query?q=" +
+    encodeURIComponent(soql);
+
+  const res = await fetch(url, {
+    headers: {
+      Authorization: "Bearer " + token.access_token
+    }
+  });
+
+  return await res.json();
+}
+
+app.post("/poll/:accountId", async (req, res) => {
+  const account = accounts[req.params.accountId];
+
+  if (!account) {
+    return res.status(404).json({ error: "Account not found" });
+  }
+
+  try {
+    const result = await pollAccount(account);
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+async function pollAccount(account) {
+  const results = [];
+
+  for (const config of account.objectConfigs || []) {
+
+    if (!config.entryQueueId) continue;
+
+    const fields = config.requiredFields || ["Id", "OwnerId"];
+
+    const soql = `
+      SELECT ${fields.join(",")}
+      FROM ${config.objectApiName}
+      WHERE OwnerId = '${config.entryQueueId}'
+      LIMIT 50
+    `;
+
+    console.log("Polling:", config.objectApiName);
+
+    const records = await querySalesforce(account, soql);
+
+    if (!records.records || records.records.length === 0) {
+      continue;
+    }
+
+    console.log(`Found ${records.records.length} records`);
+
+    // Use your existing assign logic
+    const assignments = records.records.map(record => {
+      let ownerId = record.OwnerId;
+
+      if (record.LeadSource === "SEO/Direct" && Number(record.Number_Units__c) > 3) {
+        ownerId = "005USERAIDHERE";
+      }
+
+      return {
+        recordId: record.Id,
+        ownerId
+      };
+    });
+
+    // Update Salesforce
+    for (const assignment of assignments) {
+      await updateOwner(
+        account,
+        config.objectApiName,
+        assignment.recordId,
+        assignment.ownerId
+      );
+    }
+
+    results.push({
+      object: config.objectApiName,
+      processed: assignments.length
+    });
+  }
+
+  return results;
+}
+
 const port = process.env.PORT || 3000;
 
 app.listen(port, () => {
