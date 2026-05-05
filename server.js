@@ -23,6 +23,16 @@ app.use((req, res, next) => {
   next();
 });
 
+app.get("/oauth/callback", (req, res) => {
+  res.send(`
+    <h2>Salesforce OAuth Callback</h2>
+    <p>Code:</p>
+    <pre>${req.query.code || "No code received"}</pre>
+    <p>Error:</p>
+    <pre>${req.query.error || ""}</pre>
+  `);
+});
+
 function evaluateCriterion(record, criterion) {
   const recordValue = record[criterion.field];
   const targetValue = criterion.value;
