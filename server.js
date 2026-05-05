@@ -133,6 +133,29 @@ async function updateDistributorNextAgent(account, distributorId, nextAgentSeque
   }
 }
 
+async function updateOwner(account, objectApiName, recordId, ownerId) {
+  const token = await refreshSalesforceToken(account);
+
+  const url =
+    token.instance_url +
+    `/services/data/v60.0/sobjects/${objectApiName}/${recordId}`;
+
+  const response = await fetch(url, {
+    method: "PATCH",
+    headers: {
+      Authorization: "Bearer " + token.access_token,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      OwnerId: ownerId
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error("Owner update failed: " + await response.text());
+  }
+}
+
 // Sync Distribution Data
 app.post("/sync", (req, res) => {
   const accountId = req.body.settings?.accountId;
@@ -413,6 +436,17 @@ for (const record of records.records) {
       matchedDistributorId: null,
       reason: "No distributor matched"
     });
+  }
+}
+
+for (const assignment of assignments) {
+  if (assignment.ownerId && assignment.ownerId !== config.entryQueueId) {
+    await updateOwner(
+      account,
+      config.objectApiName,
+      assignment.recordId,
+      assignment.ownerId
+    );
   }
 }
 
