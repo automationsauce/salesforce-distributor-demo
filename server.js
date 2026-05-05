@@ -69,12 +69,68 @@ function evaluateLogic(logic, results) {
   return Function(`return (${expression});`)();
 }
 
-function getNextAgent(distributorId) {
-  const relatedAgents = distributorConfig.agents
-    .filter(agent => agent.distributionId === distributorId && agent.active === true)
+function getNextAgentForDistributor(account, distributor) {
+  const activeAgents = (account.agents || [])
+    .filter(agent =>
+      agent.distributionId === distributor.id &&
+      agent.active === true
+    )
     .sort((a, b) => Number(a.sequence) - Number(b.sequence));
 
-  return relatedAgents[0] || null;
+  if (activeAgents.length === 0) {
+    return {
+      agent: null,
+      nextAgentSequence: distributor.nextAgent || null
+    };
+  }
+
+  const nextSequence = Number(distributor.nextAgent || activeAgents[0].sequence);
+
+  let selectedIndex = activeAgents.findIndex(
+    agent => Number(agent.sequence) === nextSequence
+  );
+
+  if (selectedIndex === -1) {
+    selectedIndex = 0;
+  }
+
+  const selectedAgent = activeAgents[selectedIndex];
+
+  const nextIndex = selectedIndex + 1 >= activeAgents.length
+    ? 0
+    : selectedIndex + 1;
+
+  const nextAgentSequence = Number(activeAgents[nextIndex].sequence);
+
+  distributor.nextAgent = nextAgentSequence;
+
+  return {
+    agent: selectedAgent,
+    nextAgentSequence
+  };
+}
+
+async function updateDistributorNextAgent(account, distributorId, nextAgentSequence) {
+  const token = await refreshSalesforceToken(account);
+
+  const url =
+    token.instance_url +
+    `/services/data/v60.0/sobjects/Distribution__c/${distributorId}`;
+
+  const response = await fetch(url, {
+    method: "PATCH",
+    headers: {
+      Authorization: "Bearer " + token.access_token,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      Next_Agent__c: nextAgentSequence
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
 }
 
 // Sync Distribution Data
@@ -172,16 +228,23 @@ app.post("/assign-bulk", (req, res) => {
       const logicMatched = evaluateLogic(distributor.logic, results);
 
       if (logicMatched) {
-        const agent = getNextAgent(distributor.id);
-
-        assignments.push({
-          recordId: record.Id,
-          ownerId: agent ? agent.userId : record.OwnerId,
-          matchedDistributorId: distributor.id,
-          reason: agent
-            ? `Matched ${distributor.name}`
-            : `Matched ${distributor.name}, but no active agent found`
-        });
+        const { agent, nextAgentSequence } =
+          getNextAgentForDistributor(account, distributor);
+        
+        if (agent) {
+          assignments.push({
+            recordId: record.Id,
+            ownerId: agent.userId,
+            matchedDistributorId: distributor.id,
+            reason: `Matched ${distributor.name}`
+          });
+        
+          await updateDistributorNextAgent(
+            account,
+            distributor.id,
+            nextAgentSequence
+          );
+        }
 
         matched = true;
         break;
