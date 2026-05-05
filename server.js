@@ -361,10 +361,60 @@ async function pollAccount(account) {
       continue;
     }
 
-    const assignments = records.records.map(record => ({
+const assignments = [];
+
+for (const record of records.records) {
+  let matched = false;
+
+  const sortedDistributors = [...(account.distributors || [])]
+    .filter(distributor => distributor.active === true)
+    .sort((a, b) => Number(a.priority || 999) - Number(b.priority || 999));
+
+  for (const distributor of sortedDistributors) {
+    const relatedCriteria = (account.criteria || [])
+      .filter(c => c.distributionId === distributor.id);
+
+    const criteriaResults = {};
+
+    for (const criterion of relatedCriteria) {
+      criteriaResults[criterion.sequence] = evaluateCriterion(record, criterion);
+    }
+
+    const logicMatched = evaluateLogic(distributor.logic, criteriaResults);
+
+    if (logicMatched) {
+      const { agent, nextAgentSequence } =
+        getNextAgentForDistributor(account, distributor);
+
+      if (agent) {
+        assignments.push({
+          recordId: record.Id,
+          ownerId: agent.userId,
+          matchedDistributorId: distributor.id,
+          reason: `Matched ${distributor.name}`
+        });
+
+        await updateDistributorNextAgent(
+          account,
+          distributor.id,
+          nextAgentSequence
+        );
+      }
+
+      matched = true;
+      break;
+    }
+  }
+
+  if (!matched) {
+    assignments.push({
       recordId: record.Id,
-      ownerId: record.OwnerId
-    }));
+      ownerId: record.OwnerId,
+      matchedDistributorId: null,
+      reason: "No distributor matched"
+    });
+  }
+}
 
     results.push({
       object: config.objectApiName,
