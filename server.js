@@ -218,6 +218,32 @@ async function querySalesforce(account, soql) {
   return await res.json();
 }
 
+async function refreshSalesforceToken(account) {
+  const conn = account.salesforceConnection || {};
+
+  const params = new URLSearchParams();
+  params.append("grant_type", "refresh_token");
+  params.append("client_id", conn.clientId);
+  params.append("client_secret", conn.clientSecret);
+  params.append("refresh_token", conn.refreshToken);
+
+  const response = await fetch("https://login.salesforce.com/services/oauth2/token", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded"
+    },
+    body: params
+  });
+
+  const body = await response.json();
+
+  if (!response.ok) {
+    throw new Error("Token refresh failed: " + JSON.stringify(body));
+  }
+
+  return body;
+}
+
 app.post("/poll/:accountId", async (req, res) => {
   const account = accounts[req.params.accountId];
 
