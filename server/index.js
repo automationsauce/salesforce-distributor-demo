@@ -5,6 +5,13 @@ const {
   evaluateLogic
 } = require("./services/logicService");
 
+const {
+  refreshSalesforceToken,
+  querySalesforce,
+  updateOwner,
+  updateDistributorNextAgent
+} = require("./crm/salesforce/salesforceService");
+
 let accounts = {};
 
 app.use(express.json());
@@ -80,51 +87,7 @@ function getNextAgentForDistributor(account, distributor) {
   };
 }
 
-async function updateDistributorNextAgent(account, distributorId, nextAgentSequence) {
-  const token = await refreshSalesforceToken(account);
 
-  const url =
-    token.instance_url +
-    `/services/data/v60.0/sobjects/Distribution__c/${distributorId}`;
-
-  const response = await fetch(url, {
-    method: "PATCH",
-    headers: {
-      Authorization: "Bearer " + token.access_token,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      Next_Agent__c: nextAgentSequence
-    })
-  });
-
-  if (!response.ok) {
-    throw new Error(await response.text());
-  }
-}
-
-async function updateOwner(account, objectApiName, recordId, ownerId) {
-  const token = await refreshSalesforceToken(account);
-
-  const url =
-    token.instance_url +
-    `/services/data/v60.0/sobjects/${objectApiName}/${recordId}`;
-
-  const response = await fetch(url, {
-    method: "PATCH",
-    headers: {
-      Authorization: "Bearer " + token.access_token,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      OwnerId: ownerId
-    })
-  });
-
-  if (!response.ok) {
-    throw new Error("Owner update failed: " + await response.text());
-  }
-}
 
 // Sync Distribution Data
 app.post("/sync", (req, res) => {
@@ -259,48 +222,7 @@ app.post("/assign-bulk", async (req, res) => {
   res.json({ assignments });
 });
 
-async function querySalesforce(account, soql) {
-  const token = await refreshSalesforceToken(account);
 
-  const url =
-    token.instance_url +
-    "/services/data/v60.0/query?q=" +
-    encodeURIComponent(soql);
-
-  const res = await fetch(url, {
-    headers: {
-      Authorization: "Bearer " + token.access_token
-    }
-  });
-
-  return await res.json();
-}
-
-async function refreshSalesforceToken(account) {
-  const conn = account.salesforceConnection || {};
-
-  const params = new URLSearchParams();
-  params.append("grant_type", "refresh_token");
-  params.append("client_id", conn.clientId);
-  params.append("client_secret", conn.clientSecret);
-  params.append("refresh_token", conn.refreshToken);
-
-  const response = await fetch("https://login.salesforce.com/services/oauth2/token", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded"
-    },
-    body: params
-  });
-
-  const body = await response.json();
-
-  if (!response.ok) {
-    throw new Error("Token refresh failed: " + JSON.stringify(body));
-  }
-
-  return body;
-}
 
 app.post("/poll/:accountId", async (req, res) => {
   const account = accounts[req.params.accountId];
@@ -317,118 +239,7 @@ app.post("/poll/:accountId", async (req, res) => {
   }
 });
 
-async function pollAccount(account) {
-  const results = [];
 
-  for (const config of account.objectConfigs || []) {
-    if (!config.entryQueueId) {
-      results.push({
-        object: config.objectApiName,
-        skipped: true,
-        reason: "Missing entryQueueId"
-      });
-      continue;
-    }
-
-    const fields = config.requiredFields || ["Id", "OwnerId"];
-
-    const soql = `
-      SELECT ${fields.join(",")}
-      FROM ${config.objectApiName}
-      WHERE OwnerId = '${config.entryQueueId}'
-      LIMIT 50
-    `;
-
-    console.log("SOQL:", soql);
-
-    const records = await querySalesforce(account, soql);
-
-    console.log("Salesforce response:", JSON.stringify(records, null, 2));
-
-    if (!records.records || records.records.length === 0) {
-      results.push({
-        object: config.objectApiName,
-        recordsFound: 0,
-        soql
-      });
-      continue;
-    }
-
-const assignments = [];
-
-for (const record of records.records) {
-  let matched = false;
-
-  const sortedDistributors = [...(account.distributors || [])]
-    .filter(distributor => distributor.active === true)
-    .sort((a, b) => Number(a.priority || 999) - Number(b.priority || 999));
-
-  for (const distributor of sortedDistributors) {
-    const relatedCriteria = (account.criteria || [])
-      .filter(c => c.distributionId === distributor.id);
-
-    const criteriaResults = {};
-
-    for (const criterion of relatedCriteria) {
-      criteriaResults[criterion.sequence] = evaluateCriterion(record, criterion);
-    }
-
-    const logicMatched = evaluateLogic(distributor.logic, criteriaResults);
-
-    if (logicMatched) {
-      const { agent, nextAgentSequence } =
-        getNextAgentForDistributor(account, distributor);
-
-      if (agent) {
-        assignments.push({
-          recordId: record.Id,
-          ownerId: agent.userId,
-          matchedDistributorId: distributor.id,
-          reason: `Matched ${distributor.name}`
-        });
-
-        await updateDistributorNextAgent(
-          account,
-          distributor.id,
-          nextAgentSequence
-        );
-      }
-
-      matched = true;
-      break;
-    }
-  }
-
-  if (!matched) {
-    assignments.push({
-      recordId: record.Id,
-      ownerId: record.OwnerId,
-      matchedDistributorId: null,
-      reason: "No distributor matched"
-    });
-  }
-}
-
-for (const assignment of assignments) {
-  if (assignment.ownerId && assignment.ownerId !== config.entryQueueId) {
-    await updateOwner(
-      account,
-      config.objectApiName,
-      assignment.recordId,
-      assignment.ownerId
-    );
-  }
-}
-
-    results.push({
-      object: config.objectApiName,
-      recordsFound: records.records.length,
-      assignments
-    });
-  }
-
-  return results;
-}
 
 const port = process.env.PORT || 3000;
 
