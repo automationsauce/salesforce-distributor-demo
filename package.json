@@ -1,5 +1,5 @@
 {
-  "name": "salesforce-distributor-demo",
+  "name": "distribution-dynamo",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
