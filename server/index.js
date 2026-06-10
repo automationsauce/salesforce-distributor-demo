@@ -13,6 +13,10 @@ const {
 } = require("./crm/salesforce/salesforceService");
 
 const {
+  pollAccount
+} = require("./services/pollingService");
+
+const {
   getNextAgentForDistributor
 } = require("./services/assignmentService");
 

@@ -1,3 +1,18 @@
+const {
+  evaluateCriterion,
+  evaluateLogic
+} = require("./logicService");
+
+const {
+  querySalesforce,
+  updateOwner,
+  updateDistributorNextAgent
+} = require("../crm/salesforce/salesforceService");
+
+const {
+  getNextAgentForDistributor
+} = require("./assignmentService");
+
 async function pollAccount(account) {
   const results = [];
 
