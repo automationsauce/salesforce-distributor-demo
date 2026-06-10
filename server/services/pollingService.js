@@ -125,3 +125,7 @@ for (const assignment of assignments) {
 
   return results;
 }
+
+module.exports = {
+  pollAccount
+};
