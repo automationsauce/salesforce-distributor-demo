@@ -65,42 +65,50 @@ app.get("/oauth/callback", (req, res) => {
 
 // Sync Distribution Data
 app.post("/sync", async (req, res) => {
-  const accountId = req.body.settings?.accountId;
+  try {
+    const accountId = req.body.settings?.accountId;
 
-  await upsertAccount(
-    accountId,
-    req.body.settings?.accountName || accountId
-  );
+    if (!accountId) {
+      return res.status(400).json({ error: "Missing accountId" });
+    }
 
-  await upsertConnection(
-    account.id,
-    "salesforce",
-    req.body.salesforceConnection?.instanceURL,
-    req.body.salesforceConnection?.clientId,
-    req.body.salesforceConnection?.clientSecret,
-    req.body.salesforceConnection?.refreshToken
-  );
+    const account = await upsertAccount(
+      accountId,
+      req.body.settings?.accountName || accountId
+    );
 
-  if (!accountId) {
-    return res.status(400).json({ error: "Missing accountId" });
+    await upsertConnection(
+      account.id, // IMPORTANT: database UUID, not TEST123456
+      "salesforce",
+      req.body.salesforceConnection?.instanceUrl,
+      req.body.salesforceConnection?.clientId,
+      req.body.salesforceConnection?.clientSecret,
+      req.body.salesforceConnection?.refreshToken
+    );
+
+    accounts[accountId] = {
+      settings: req.body.settings || {},
+      salesforceConnection: req.body.salesforceConnection || {},
+      distributors: req.body.distributors || [],
+      criteria: req.body.criteria || [],
+      agents: req.body.agents || [],
+      objectConfigs: req.body.objectConfigs || []
+    };
+
+    distributorConfig = accounts[accountId];
+
+    res.json({
+      success: true,
+      message: "Metadata and Salesforce connection synced",
+      accountId
+    });
+
+  } catch (e) {
+    console.error("SYNC ERROR:", e);
+    res.status(500).json({
+      error: e.message
+    });
   }
-
-  accounts[accountId] = {
-    settings: req.body.settings || {},
-    salesforceConnection: req.body.salesforceConnection || {},
-    distributors: req.body.distributors || [],
-    criteria: req.body.criteria || [],
-    agents: req.body.agents || [],
-    objectConfigs: req.body.objectConfigs || []
-  };
-
-  distributorConfig = accounts[accountId];
-
-  res.json({
-    success: true,
-    message: "Metadata and Salesforce connection synced",
-    accountId
-  });
 });
 // Config
 app.get("/config", (req, res) => {
