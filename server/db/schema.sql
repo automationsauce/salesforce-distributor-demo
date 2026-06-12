@@ -27,3 +27,26 @@ CREATE TABLE object_configs (
     enable_polling BOOLEAN DEFAULT TRUE,
     active BOOLEAN DEFAULT TRUE
 );
+
+CREATE TABLE distributors (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    account_id UUID NOT NULL REFERENCES accounts(id),
+    object_config_id UUID NOT NULL REFERENCES object_configs(id),
+    external_id VARCHAR(255),
+    name VARCHAR(255),
+    logic TEXT,
+    priority INTEGER,
+    next_agent_sequence INTEGER,
+    active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE distributor_criteria (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    distributor_id UUID NOT NULL REFERENCES distributors(id),
+    sequence_number INTEGER,
+    field_name VARCHAR(255),
+    operator VARCHAR(20),
+    comparison_value TEXT,
+    created_at TIMESTAMP DEFAULT NOW()
+);
