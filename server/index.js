@@ -7,6 +7,10 @@ const {
 } = require("./services/logicService");
 
 const {
+  upsertAccount
+} = require("./services/accountService");
+
+const {
   refreshSalesforceToken,
   querySalesforce,
   updateOwner,
@@ -56,8 +60,13 @@ app.get("/oauth/callback", (req, res) => {
 });
 
 // Sync Distribution Data
-app.post("/sync", (req, res) => {
+app.post("/sync", async (req, res) => {
   const accountId = req.body.settings?.accountId;
+
+  await upsertAccount(
+    accountId,
+    req.body.settings?.accountName || accountId
+  );
 
   if (!accountId) {
     return res.status(400).json({ error: "Missing accountId" });

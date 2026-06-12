@@ -1,33 +1,39 @@
 const pool = require("../db/connection");
 
-async function upsertAccount(accountKey, name = null, status = "ACTIVE") {
+async function upsertAccount(accountKey, name = null) {
   const result = await pool.query(
     `
-    INSERT INTO accounts (account_key, name, status, updated_at)
-    VALUES ($1, $2, $3, NOW())
+    INSERT INTO accounts (
+      account_key,
+      name
+    )
+    VALUES ($1, $2)
     ON CONFLICT (account_key)
     DO UPDATE SET
       name = EXCLUDED.name,
-      status = EXCLUDED.status,
       updated_at = NOW()
     RETURNING *
     `,
-    [accountKey, name, status]
+    [accountKey, name]
   );
 
   return result.rows[0];
 }
 
-async function getAccountByKey(accountKey) {
+async function getAccount(accountKey) {
   const result = await pool.query(
-    `SELECT * FROM accounts WHERE account_key = $1`,
+    `
+    SELECT *
+    FROM accounts
+    WHERE account_key = $1
+    `,
     [accountKey]
   );
 
-  return result.rows[0] || null;
+  return result.rows[0];
 }
 
 module.exports = {
   upsertAccount,
-  getAccountByKey
+  getAccount
 };
