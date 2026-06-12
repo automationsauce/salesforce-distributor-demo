@@ -11,6 +11,10 @@ const {
 } = require("./services/accountService");
 
 const {
+  upsertConnection
+} = require("./services/crmConnectionService");
+
+const {
   refreshSalesforceToken,
   querySalesforce,
   updateOwner,
@@ -66,6 +70,15 @@ app.post("/sync", async (req, res) => {
   await upsertAccount(
     accountId,
     req.body.settings?.accountName || accountId
+  );
+
+  await upsertConnection(
+    accountId,
+    "salesforce",
+    req.body.salesforceConnection?.instanceURL,
+    req.body.salesforceConnection?.clientId,
+    req.body.salesforceConnection?.clientSecret,
+    req.body.salesforceConnection?.refreshToken
   );
 
   if (!accountId) {
