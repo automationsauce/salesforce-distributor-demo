@@ -1,6 +1,13 @@
 const pool = require("../db/connection");
 
-async function upsertConnection(accountId, crmType, instanceURL, clientId, clientSecret, refreshToken) {
+async function upsertConnection(
+  accountId,
+  crmType,
+  instanceUrl,
+  clientId,
+  clientSecret,
+  refreshToken
+) {
   const result = await pool.query(
     `
     INSERT INTO crm_connections (
@@ -9,20 +16,22 @@ async function upsertConnection(accountId, crmType, instanceURL, clientId, clien
       instance_url,
       client_id,
       client_secret_encrypted,
-      refresh_token_encrypted
+      refresh_token_encrypted,
+      active,
+      updated_at
     )
-    VALUES ($1, $2, $3, $4, $5, $6)
-    ON CONFLICT (account_id)
+    VALUES ($1, $2, $3, $4, $5, $6, TRUE, NOW())
+    ON CONFLICT (account_id, crm_type)
     DO UPDATE SET
-      crm_type = EXCLUDED.crm_type,
       instance_url = EXCLUDED.instance_url,
       client_id = EXCLUDED.client_id,
       client_secret_encrypted = EXCLUDED.client_secret_encrypted,
       refresh_token_encrypted = EXCLUDED.refresh_token_encrypted,
+      active = TRUE,
       updated_at = NOW()
     RETURNING *
     `,
-    [accountId, crmType, instanceURL, clientId, clientSecret, refreshToken]
+    [accountId, crmType, instanceUrl, clientId, clientSecret, refreshToken]
   );
 
   return result.rows[0];
@@ -35,6 +44,7 @@ async function getConnection(accountId, crmType) {
     FROM crm_connections
     WHERE account_id = $1
     AND crm_type = $2
+    AND active = TRUE
     `,
     [accountId, crmType]
   );
@@ -46,4 +56,3 @@ module.exports = {
   upsertConnection,
   getConnection
 };
-   

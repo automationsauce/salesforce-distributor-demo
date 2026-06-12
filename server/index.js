@@ -73,7 +73,7 @@ app.post("/sync", async (req, res) => {
   );
 
   await upsertConnection(
-    accountId,
+    account.id,
     "salesforce",
     req.body.salesforceConnection?.instanceURL,
     req.body.salesforceConnection?.clientId,
