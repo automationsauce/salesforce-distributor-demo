@@ -26,7 +26,8 @@ CREATE TABLE crm_connections (
     refresh_token_encrypted TEXT,
     active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
+    updated_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE (account_id, crm_type)
 );
 
 CREATE TABLE object_configs (
@@ -38,7 +39,8 @@ CREATE TABLE object_configs (
     enable_polling BOOLEAN DEFAULT TRUE,
     active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
+    updated_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE (account_id, object_name)
 );
 
 CREATE TABLE distributors (

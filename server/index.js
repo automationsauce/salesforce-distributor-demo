@@ -15,6 +15,10 @@ const {
 } = require("./services/crmConnectionService");
 
 const {
+  upsertObjectConfig
+} = require("./services/objectConfigService");
+
+const {
   refreshSalesforceToken,
   querySalesforce,
   updateOwner,
@@ -85,6 +89,17 @@ app.post("/sync", async (req, res) => {
       req.body.salesforceConnection?.clientSecret,
       req.body.salesforceConnection?.refreshToken
     );
+
+    for (const cfg of req.body.objectConfigs || []) {
+      await upsertObjectConfig(
+        account.id,
+        cfg.objectApiName,
+        cfg.entryQueueId,
+        cfg.requiredFields || ["Id", "OwnerId"],
+        req.body.settings?.enablePolling ?? true,
+        true
+      );
+    }
 
     accounts[accountId] = {
       settings: req.body.settings || {},
