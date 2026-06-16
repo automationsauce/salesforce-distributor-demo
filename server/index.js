@@ -33,6 +33,13 @@ const {
   pollAccount
 } = require("./services/pollingService");
 
+const {
+  upsertDistributor
+} = require("./services/distributorService");
+
+const {
+  replaceCriteriaForDistributor
+} = require("./services/criteriaService");
 
 let accounts = {};
 
@@ -90,8 +97,10 @@ app.post("/sync", async (req, res) => {
       req.body.salesforceConnection?.refreshToken
     );
 
+    const savedObjectConfigs = [];
+
     for (const cfg of req.body.objectConfigs || []) {
-      await upsertObjectConfig(
+      const savedConfig = await upsertObjectConfig(
         account.id,
         cfg.objectApiName,
         cfg.entryQueueId,
@@ -99,8 +108,33 @@ app.post("/sync", async (req, res) => {
         req.body.settings?.enablePolling ?? true,
         true
       );
+
+      savedObjectConfigs.push(savedConfig);
     }
 
+    for (const distributor of req.body.distributors || []) {
+      const matchingObjectConfig = savedObjectConfigs.find(
+        cfg => cfg.object_name === distributor.sObject
+      );
+
+      if (!matchingObjectConfig) continue;
+
+      const savedDistributor = await upsertDistributor(
+        account.id,
+        matchingObjectConfig.id,
+        distributor
+      );
+
+      const relatedCriteria = (req.body.criteria || []).filter(
+        c => c.distributionId === distributor.id
+      );
+
+      await replaceCriteriaForDistributor(
+        savedDistributor.id,
+        relatedCriteria
+      );
+    }
+    
     accounts[accountId] = {
       settings: req.body.settings || {},
       salesforceConnection: req.body.salesforceConnection || {},
