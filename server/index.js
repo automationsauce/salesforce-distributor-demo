@@ -41,6 +41,10 @@ const {
   replaceCriteriaForDistributor
 } = require("./services/criteriaService");
 
+const {
+  replaceAgentForDistributor
+} = require("./services/agentService");
+
 let accounts = {};
 
 app.use(express.json());
@@ -132,6 +136,15 @@ app.post("/sync", async (req, res) => {
       await replaceCriteriaForDistributor(
         savedDistributor.id,
         relatedCriteria
+      );
+
+      const relatedAgents = (req.body.agents || []).filter(
+        a => a.distributionId === distributor.id
+      );
+
+      await replaceAgentsForDistributor(
+        savedDistributor.id,
+        relatedAgents
       );
     }
     
