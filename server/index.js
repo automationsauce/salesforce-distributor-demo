@@ -45,6 +45,10 @@ const {
   replaceAgentsForDistributor
 } = require("./services/agentService");
 
+const {
+  loadAccount
+} = require("./services/accountLoaderService");
+
 let accounts = {};
 
 app.use(express.json());
@@ -283,8 +287,8 @@ app.post("/assign-bulk", async (req, res) => {
 
 
 app.post("/poll/:accountId", async (req, res) => {
-  const account = accounts[req.params.accountId];
-
+  const account = await loadAccount(req.params.accountId);
+  
   if (!account) {
     return res.status(404).json({ error: "Account not found" });
   }
