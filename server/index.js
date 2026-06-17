@@ -42,7 +42,7 @@ const {
 } = require("./services/criteriaService");
 
 const {
-  replaceAgentForDistributor
+  replaceAgentsForDistributor
 } = require("./services/agentService");
 
 let accounts = {};
