@@ -151,7 +151,7 @@ app.post("/sync", async (req, res) => {
         relatedAgents
       );
     }
-    
+    /*
     accounts[accountId] = {
       settings: req.body.settings || {},
       salesforceConnection: req.body.salesforceConnection || {},
@@ -162,7 +162,7 @@ app.post("/sync", async (req, res) => {
     };
 
     distributorConfig = accounts[accountId];
-
+    */
     res.json({
       success: true,
       message: "Metadata and Salesforce connection synced",
