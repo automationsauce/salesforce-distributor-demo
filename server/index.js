@@ -49,15 +49,15 @@ const {
   loadAccount
 } = require("./services/accountLoaderService");
 
-let accounts = {};
+//let accounts = {};
 
 app.use(express.json());
 
-let distributorConfig = {
-  distributors: [],
-  criteria: [],
-  agents: []
-};
+//let distributorConfig = {
+//  distributors: [],
+//  criteria: [],
+//  agents: []
+//};
 
 app.get("/", (req, res) => {
   res.send("Salesforce Distributor Demo is running");
@@ -287,16 +287,17 @@ app.post("/assign-bulk", async (req, res) => {
 
 
 app.post("/poll/:accountId", async (req, res) => {
-  const account = await loadAccount(req.params.accountId);
-  
-  if (!account) {
-    return res.status(404).json({ error: "Account not found" });
-  }
-
   try {
+    const account = await loadAccount(req.params.accountId);
+
+    if (!account) {
+      return res.status(404).json({ error: "Account not found" });
+    }
+
     const result = await pollAccount(account);
     res.json(result);
   } catch (e) {
+    console.error("POLL ERROR:", e);
     res.status(500).json({ error: e.message });
   }
 });
