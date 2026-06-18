@@ -33,7 +33,18 @@ async function getAccount(accountKey) {
   return result.rows[0];
 }
 
+async function getActiveAccounts() {
+  const result = await pool.query(`
+    SELECT *
+    FROM accounts
+    WHERE status = 'ACTIVE'
+  `);
+
+  return result.rows;
+}
+
 module.exports = {
   upsertAccount,
-  getAccount
+  getAccount,
+  getActiveAccounts
 };

@@ -11,6 +11,10 @@ const {
 } = require("./services/accountService");
 
 const {
+  getActiveAccounts
+} = require("./services/accountService");
+
+const {
   upsertConnection
 } = require("./services/crmConnectionService");
 
@@ -306,21 +310,19 @@ app.post("/poll/:accountId", async (req, res) => {
 
 const port = process.env.PORT || 3000;
 
-app.listen(port, () => {
-  console.log(`Distributor demo running on port ${port}`);
-});
-
 setInterval(async () => {
-  for (const accountId in accounts) {
-    const account = accounts[accountId];
+  try {
+    const activeAccounts = await getActiveAccounts();
 
-    if (!account.settings?.enablePolling) continue;
+    for (const dbAccount of activeAccounts) {
+      const account = await loadAccount(dbAccount.account_key);
 
-    try {
-      console.log("Auto polling:", accountId);
+      if (!account?.settings?.enablePolling) continue;
+
+      console.log("Auto polling:", dbAccount.account_key);
       await pollAccount(account);
-    } catch (e) {
-      console.error("Polling error:", e.message);
     }
+  } catch (e) {
+    console.error("Auto polling error:", e.message);
   }
-}, 30000); // every 30 seconds
+}, 30000);
