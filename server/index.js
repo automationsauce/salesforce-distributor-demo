@@ -310,6 +310,10 @@ app.post("/poll/:accountId", async (req, res) => {
 
 const port = process.env.PORT || 3000;
 
+app.listen(port, () => {
+  console.log(`Distributor demo running on port ${port}`);
+});
+
 setInterval(async () => {
   try {
     const activeAccounts = await getActiveAccounts();
