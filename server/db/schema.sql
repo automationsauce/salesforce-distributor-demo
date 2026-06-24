@@ -6,6 +6,7 @@ DROP TABLE IF EXISTS distributors CASCADE;
 DROP TABLE IF EXISTS object_configs CASCADE;
 DROP TABLE IF EXISTS crm_connections CASCADE;
 DROP TABLE IF EXISTS accounts CASCADE;
+DROP TABLE IF EXISTS assignment_logs CASCADE;
 
 CREATE TABLE accounts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -77,4 +78,15 @@ CREATE TABLE distributor_agents (
     active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE assignment_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    account_id INTEGER REFERENCES accounts(id),
+    object_name VARCHAR(255),
+    record_id VARCHAR(255),
+    distributor_name VARCHAR(255),
+    assigned_user_id VARCHAR(255),
+    reason TEXT,
+    created_at TIMESTAMP DEFAULT NOW()
 );
