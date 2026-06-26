@@ -39,7 +39,20 @@ async function querySalesforce(account, soql) {
     }
   });
 
-  return await res.json();
+  const text = await res.text();
+
+  console.log("Salesforce query status:", res.status);
+  console.log("Salesforce query body:", text);
+
+  if (!res.ok) {
+    throw new Error(`Salesforce query failed ${res.status}: ${text}`);
+  }
+
+  if (!text) {
+    throw new Error("Salesforce query returned empty body");
+  }
+
+  return JSON.parse(text);
 }
 
 async function updateDistributorNextAgent(account, distributorId, nextAgentSequence) {
